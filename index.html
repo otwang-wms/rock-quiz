@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>岩石分類大挑戰！</title>
+    <style>
+        /* 全局與平板響應式設定 */
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            font-family: 'Comic Sans MS', 'Microsoft JhengHei', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f0f8ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .screen {
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding: 20px;
+        }
+        .screen.active {
+            display: flex;
+        }
+        
+        /* 開始畫面 */
+        #start-screen { justify-content: center; }
+        .title { font-size: 40px; color: #ff6b6b; margin-bottom: 30px; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); text-align: center;}
+        .input-box { font-size: 24px; padding: 15px; border-radius: 15px; border: 3px solid #4ecdc4; width: 80%; max-width: 400px; text-align: center; margin-bottom: 20px; outline: none;}
+        .btn { font-size: 28px; padding: 15px 40px; border-radius: 20px; border: none; cursor: pointer; background-color: #ff9f43; color: white; box-shadow: 0 6px 0 #d35400; transition: all 0.1s; font-weight: bold;}
+        .btn:active { transform: translateY(6px); box-shadow: 0 0px 0 #d35400; }
+
+        /* 遊戲畫面 */
+        .header { width: 100%; display: flex; justify-content: space-between; align-items: flex-start; padding: 10px; }
+        .info-box { font-size: 28px; font-weight: bold; background: white; padding: 10px 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #timer-text { color: #e74c3c; }
+        #score-text { color: #2980b9; font-size: 36px; margin-top: 10px; }
+        #hearts { color: #e74c3c; letter-spacing: 5px; }
+
+        /* 彩虹時間條 */
+        .progress-container { width: 90%; max-width: 600px; height: 20px; background: #ddd; border-radius: 10px; margin-top: 30px; overflow: hidden; position: relative;}
+        .progress-bar { 
+            height: 100%; width: 100%; 
+            background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, purple);
+            transform-origin: left;
+            border-radius: 10px;
+        }
+
+        /* 圖片與作答區 */
+        .image-container { flex: 1; display: flex; justify-content: center; align-items: center; margin: 20px 0; max-height: 40vh;}
+        .rock-img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 15px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); border: 5px solid white;}
+        
+        .answers { display: flex; gap: 15px; width: 100%; max-width: 800px; justify-content: center; padding-bottom: 20px;}
+        .ans-btn { flex: 1; height: 100px; font-size: 32px; border-radius: 20px; border: none; cursor: pointer; font-weight: bold; position: relative; transition: all 0.1s;}
+        .ans-btn:active { transform: translateY(5px); }
+        .btn-igneous { background-color: #ffeaa7; color: #d35400; box-shadow: 0 6px 0 #f39c12; }
+        .btn-sedimentary { background-color: #81ecec; color: #0984e3; box-shadow: 0 6px 0 #00cec9; }
+        .btn-metamorphic { background-color: #55efc4; color: #00b894; box-shadow: 0 6px 0 #00cec9; }
+        
+        .feedback-icon { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); font-size: 60px; display: none; z-index: 10; animation: pop 0.3s ease-out;}
+        @keyframes pop { 0% { transform: translateX(-50%) scale(0); } 100% { transform: translateX(-50%) scale(1); } }
+
+        /* 結算畫面 */
+        #end-screen { background-color: #fff9c4; overflow-y: auto;}
+        .certificate { background: white; border: 8px solid #ff9f43; border-radius: 20px; padding: 20px; width: 90%; max-width: 500px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .cert-title { font-size: 32px; color: #ff6b6b; margin-bottom: 10px;}
+        .cert-name { font-size: 40px; color: #2980b9; font-weight: bold; margin: 10px 0;}
+        .cert-score { font-size: 48px; color: #e74c3c; font-weight: bold; margin: 10px 0;}
+        .cert-comment { font-size: 24px; color: #27ae60; }
+        
+        .leaderboard { width: 90%; max-width: 500px; background: white; border-radius: 15px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
+        .leaderboard h3 { text-align: center; font-size: 24px; color: #8e44ad; margin-bottom: 10px;}
+        .rank-item { display: flex; justify-content: space-between; font-size: 20px; padding: 5px 0; border-bottom: 1px dashed #ccc;}
+        
+        /* 管理員按鈕與介面 */
+        #admin-btn { position: absolute; top: 0; left: 0; width: 40px; height: 40px; background: transparent; border: none; cursor: pointer; z-index: 100;}
+        #admin-screen { background: rgba(0,0,0,0.9); color: white; justify-content: center; z-index: 200; position: absolute; top:0; left:0;}
+        .admin-box { background: white; color: black; padding: 30px; border-radius: 15px; text-align: center; font-size: 20px;}
+        .admin-box input { font-size: 20px; padding: 5px; width: 100px; margin: 10px; text-align: center;}
+        .admin-box label { display: block; margin: 15px 0; cursor: pointer;}
+    </style>
+</head>
+<body>
+
+    <!-- 隱藏管理員入口 -->
+    <button id="admin-btn" onclick="checkAdmin()"></button>
+
+    <!-- 初始畫面 -->
+    <div id="start-screen" class="screen active">
+        <h1 class="title">🪨 岩石分類大挑戰！ 🪨</h1>
+        <input type="text" id="player-name" class="input-box" placeholder="請輸入你的名稱或暱稱" maxlength="10">
+        <button class="btn" onclick="startGame()">開始挑戰</button>
+    </div>
+
+    <!-- 遊戲畫面 -->
+    <div id="game-screen" class="screen">
+        <div class="header">
+            <div class="info-box" id="timer-text">⏳ 60</div>
+            <div style="display:flex; flex-direction: column; align-items: center;">
+                <div class="info-box" id="score-text">0 分</div>
+            </div>
+            <div class="info-box" id="hearts">❤️❤️❤️</div>
+        </div>
+        
+        <!-- 彩虹漸層條 -->
+        <div class="progress-container">
+            <div class="progress-bar" id="time-bar"></div>
+        </div>
+
+        <div class="image-container">
+            <!-- 嚴格依賴題目提供的檔名 -->
+            <img id="rock-image" class="rock-img" src="" alt="岩石圖片">
+        </div>
+
+        <div class="answers">
+            <button class="ans-btn btn-igneous" onclick="checkAnswer('火成岩', this)">火成岩
+                <span class="feedback-icon" id="fb-igneous"></span>
+            </button>
+            <button class="ans-btn btn-sedimentary" onclick="checkAnswer('沉積岩', this)">沉積岩
+                <span class="feedback-icon" id="fb-sedimentary"></span>
+            </button>
+            <button class="ans-btn btn-metamorphic" onclick="checkAnswer('變質岩', this)">變質岩
+                <span class="feedback-icon" id="fb-metamorphic"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="end-screen" class="screen">
+        <div class="certificate">
+            <div class="cert-title">🏆 挑戰完成證照 🏆</div>
+            <div class="cert-name" id="cert-name"></div>
+            <div>總得分</div>
+            <div class="cert-score" id="cert-score">0</div>
+            <div class="cert-comment" id="cert-comment"></div>
+        </div>
+
+        <div class="leaderboard">
+            <h3>🌟 線上榮譽榜 (前10名) 🌟</h3>
+            <div id="leaderboard-list"></div>
+        </div>
+
+        <button class="btn" style="background-color: #2ecc71; box-shadow: 0 6px 0 #27ae60;" onclick="resetToStart()">再次挑戰！</button>
+    </div>
+
+    <!-- 管理員畫面 -->
+    <div id="admin-screen" class="screen">
+        <div class="admin-box">
+            <h2>⚙️ 管理員設定</h2>
+            <div style="margin-top: 20px;">
+                倒數計時秒數：<br>
+                <input type="number" id="admin-time" value="60" min="10" max="300">
+            </div>
+            <label>
+                <input type="checkbox" id="admin-clear" value="yes"> 是否清空線上紀錄？(打勾為是)
+            </label>
+            <button class="btn" style="font-size: 20px; padding: 10px 20px;" onclick="saveAdmin()">確定修改</button>
+            <button class="btn" style="font-size: 20px; padding: 10px 20px; background: #95a5a6; box-shadow: 0 6px 0 #7f8c8d; margin-top: 10px;" onclick="closeAdmin()">取消</button>
+        </div>
+    </div>
+
+    <script>
+        // 音效合成器 (Web Audio API)，免載入外部音檔
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            if (type === 'correct') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            }
+        }
+
+        // 岩石資料庫
+        const rocksData = [
+            { id: 1, name: '片麻岩', type: '變質岩', img: '片麻岩.jpg' },
+            { id: 2, name: '板岩', type: '變質岩', img: '板岩.jpg' },
+            { id: 3, name: '大理岩', type: '變質岩', img: '大理岩.jpg' },
+            { id: 4, name: '砂岩', type: '沉積岩', img: '砂岩.jpg' },
+            { id: 5, name: '頁岩', type: '沉積岩', img: '頁岩.jpg' },
+            { id: 6, name: '石灰岩', type: '沉積岩', img: '石灰岩.jpg' },
+            { id: 7, name: '玄武岩', type: '火成岩', img: '玄武岩.jpg' },
+            { id: 8, name: '花崗岩', type: '火成岩', img: '花崗岩.jpg' },
+            { id: 9, name: '安山岩', type: '火成岩', img: '安山岩.jpg' }
+        ];
+
+        // 遊戲狀態變數
+        let playerName = "";
+        let defaultTime = 60; // 管理員可改
+        let globalTime = 60;
+        let score = 0;
+        let lives = 3;
+        let currentRock = null;
+        let globalTimerInterval = null;
+        
+        // 題目計時器相關
+        let questionStartTime = 0;
+        let questionAnimFrame = null;
+        let isAnswerLocked = false;
+        let currentQuestionScore = 100;
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function startGame() {
+            const nameInput = document.getElementById('player-name').value.trim();
+            playerName = nameInput === "" ? "神秘探險家" : nameInput;
+            
+            globalTime = defaultTime;
+            score = 0;
+            lives = 3;
+            updateUI();
+            
+            showScreen('game-screen');
+            
+            // 啟動全局倒數
+            clearInterval(globalTimerInterval);
+            globalTimerInterval = setInterval(() => {
+                globalTime--;
+                document.getElementById('timer-text').innerText = `⏳ ${globalTime}`;
+                if (globalTime <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            nextQuestion();
+        }
+
+        function updateUI() {
+            document.getElementById('timer-text').innerText = `⏳ ${globalTime}`;
+            document.getElementById('score-text').innerText = `${score} 分`;
+            document.getElementById('hearts').innerText = '❤️'.repeat(lives) || '💔';
+        }
+
+        function nextQuestion() {
+            if(globalTime <= 0 || lives <= 0) return;
+            isAnswerLocked = false;
+            
+            // 隨機選題
+            const randIndex = Math.floor(Math.random() * rocksData.length);
+            currentRock = rocksData[randIndex];
+            document.getElementById('rock-image').src = currentRock.img;
+            
+            // 重置反饋圖示
+            document.querySelectorAll('.feedback-icon').forEach(icon => {
+                icon.innerHTML = "";
+                icon.style.display = "none";
+            });
+
+            // 啟動單題彩虹進度條 (5秒)
+            questionStartTime = performance.now();
+            cancelAnimationFrame(questionAnimFrame);
+            updateProgressBar();
+        }
+
+        // 處理彩虹長條動畫與分數遞減
+        function updateProgressBar() {
+            if (isAnswerLocked) return;
+            
+            const now = performance.now();
+            const elapsed = (now - questionStartTime) / 1000; // 經過秒數
+            let progress = 0; // 消耗的百分比 0~1
+
+            // 演算法：5秒總計
+            // 0-1.5s: 消耗 50%
+            // 1.5-3.0s: 消耗 30%
+            // 3.0-5.0s: 消耗 20%
+            if (elapsed <= 1.5) {
+                progress = (elapsed / 1.5) * 0.5;
+            } else if (elapsed <= 3.0) {
+                progress = 0.5 + ((elapsed - 1.5) / 1.5) * 0.3;
+            } else if (elapsed <= 5.0) {
+                progress = 0.8 + ((elapsed - 3.0) / 2.0) * 0.2;
+            } else {
+                progress = 1.0;
+            }
+
+            const currentWidth = Math.max(0, 100 - (progress * 100));
+            document.getElementById('time-bar').style.width = currentWidth + '%';
+            currentQuestionScore = Math.floor(currentWidth);
+
+            if (elapsed >= 5.0) {
+                // 時間到，強制鎖定，顯示答案
+                isAnswerLocked = true;
+                currentQuestionScore = 0;
+                showCorrectAnswerFeedback();
+                setTimeout(nextQuestion, 1000);
+            } else {
+                questionAnimFrame = requestAnimationFrame(updateProgressBar);
+            }
+        }
+
+        function getButtonIdByType(type) {
+            if(type === '火成岩') return 'fb-igneous';
+            if(type === '沉積岩') return 'fb-sedimentary';
+            if(type === '變質岩') return 'fb-metamorphic';
+        }
+
+        function checkAnswer(selectedType, btnElement) {
+            if (isAnswerLocked) return;
+            isAnswerLocked = true;
+            cancelAnimationFrame(questionAnimFrame);
+
+            const isCorrect = (selectedType === currentRock.type);
+            const fbId = getButtonIdByType(selectedType);
+            const fbElement = document.getElementById(fbId);
+            
+            fbElement.style.display = "block";
+
+            if (isCorrect) {
+                playSound('correct');
+                fbElement.innerHTML = "⭕️";
+                score += currentQuestionScore;
+                updateUI();
+                setTimeout(nextQuestion, 500); // 答對較快換題
+            } else {
+                playSound('wrong');
+                fbElement.innerHTML = "❌";
+                lives--;
+                updateUI();
+                
+                // 顯示正確答案在哪裡
+                const correctFbId = getButtonIdByType(currentRock.type);
+                const correctFbElement = document.getElementById(correctFbId);
+                correctFbElement.innerHTML = "⭕️";
+                correctFbElement.style.display = "block";
+
+                if (lives <= 0) {
+                    setTimeout(endGame, 1000);
+                } else {
+                    setTimeout(nextQuestion, 1000);
+                }
+            }
+        }
+
+        function showCorrectAnswerFeedback() {
+            playSound('wrong');
+            const correctFbId = getButtonIdByType(currentRock.type);
+            const correctFbElement = document.getElementById(correctFbId);
+            correctFbElement.innerHTML = "⭕️";
+            correctFbElement.style.display = "block";
+        }
+
+        function endGame() {
+            clearInterval(globalTimerInterval);
+            cancelAnimationFrame(questionAnimFrame);
+            isAnswerLocked = true;
+
+            showScreen('end-screen');
+            document.getElementById('cert-name').innerText = playerName;
+            document.getElementById('cert-score').innerText = score;
+            
+            let comment = "";
+            if(score >= 3000) comment = "太神啦！你是岩石大師！✨";
+            else if (score >= 1000) comment = "好厲害！地質學家就是你！👍";
+            else comment = "做得很棒！繼續努力哦！💪";
+            document.getElementById('cert-comment').innerText = comment;
+
+            saveAndShowLeaderboard();
+        }
+
+        // 使用 LocalStorage 模擬線上資料庫，確保 Github 靜態網頁完美運行
+        function saveAndShowLeaderboard() {
+            let records = JSON.parse(localStorage.getItem('rock_leaderboard') || '[]');
+            
+            // 寫入新紀錄
+            records.push({ name: playerName, score: score });
+            
+            // 排序 (分數高到低) 並只取前 10
+            records.sort((a, b) => b.score - a.score);
+            records = records.slice(0, 10);
+            
+            localStorage.setItem('rock_leaderboard', JSON.stringify(records));
+
+            // 渲染列表
+            const listHtml = records.map((r, i) => `
+                <div class="rank-item">
+                    <span>${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1)+'.'} ${r.name}</span>
+                    <span style="color: #e74c3c; font-weight:bold;">${r.score} 分</span>
+                </div>
+            `).join('');
+            document.getElementById('leaderboard-list').innerHTML = listHtml;
+        }
+
+        function resetToStart() {
+            showScreen('start-screen');
+            document.getElementById('player-name').value = '';
+        }
+
+        // 管理員相關功能
+        function checkAdmin() {
+            const pwd = prompt("請輸入管理員密碼：");
+            if (pwd === "otwang2026") {
+                document.getElementById('admin-time').value = defaultTime;
+                document.getElementById('admin-clear').checked = false;
+                showScreen('admin-screen');
+            } else if (pwd !== null) {
+                alert("密碼錯誤！");
+            }
+        }
+
+        function closeAdmin() {
+            showScreen('start-screen');
+        }
+
+        function saveAdmin() {
+            const newTime = parseInt(document.getElementById('admin-time').value);
+            if (!isNaN(newTime) && newTime > 0) {
+                defaultTime = newTime;
+            }
+            
+            if (document.getElementById('admin-clear').checked) {
+                localStorage.removeItem('rock_leaderboard');
+                alert("線上紀錄已清空！倒數秒數已修改。");
+            } else {
+                alert("修改完成！(保留歷史紀錄)");
+            }
+            showScreen('start-screen');
+        }
+    </script>
+</body>
+</html>
